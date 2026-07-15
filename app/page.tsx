@@ -606,7 +606,7 @@ export default function Home() {
         </nav>
       </section>
 
-      {petCreated && <FloatingPet pet={selectedPet} status={floatingPetStatus} onOpen={() => setView("home")} />}
+      <FloatingPet pet={selectedPet} status={floatingPetStatus} onOpen={() => petCreated ? setView("home") : setCreatorOpen(true)} />
 
       {creatorOpen && (
         <div className="modal-layer" role="dialog" aria-modal="true" aria-label="创建你的 AI 萌宠">
