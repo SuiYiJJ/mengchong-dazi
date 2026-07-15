@@ -128,6 +128,14 @@ function PetAvatar({ emoji, color, size = "md", pulse = false, preset }: { emoji
   );
 }
 
+function PetGifAvatar({ pet, size = "lg", className = "" }: { pet: PetChoice; size?: "lg" | "xl"; className?: string }) {
+  return (
+    <span className={`pet-avatar pet-${size} pet-pulse is-3d pet-gif-avatar ${className}`} style={{ "--pet-color": pet.color } as React.CSSProperties}>
+      <span key={pet.id} className="pet-gif-render" style={{ backgroundImage: `url('/assets/pets/${pet.id}.gif')` }} aria-hidden="true" />
+    </span>
+  );
+}
+
 function FloatingPet({ pet, status, onOpen }: { pet: PetChoice; status: string; onOpen: () => void }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const dragStart = useRef<{ x: number; y: number; offsetX: number; offsetY: number; moved: boolean } | null>(null);
@@ -159,6 +167,7 @@ function FloatingPet({ pet, status, onOpen }: { pet: PetChoice; status: string; 
   return (
     <button
       className="floating-pet"
+      data-pet-id={pet.id}
       style={{ transform: `translate3d(${offset.x}px, ${offset.y}px, 0)` }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -168,7 +177,7 @@ function FloatingPet({ pet, status, onOpen }: { pet: PetChoice; status: string; 
     >
       <span className="floating-pet-bubble"><i>●</i>{status}</span>
       <span className="floating-pet-hint">按住拖动</span>
-      <PetAvatar emoji={pet.emoji} color={pet.color} preset={pet.id} size="lg" pulse />
+      <PetGifAvatar pet={pet} size="lg" />
       <small>{pet.petName}</small>
     </button>
   );
@@ -597,7 +606,7 @@ export default function Home() {
         </nav>
       </section>
 
-      <FloatingPet pet={selectedPet} status={floatingPetStatus} onOpen={() => petCreated ? setView("home") : setCreatorOpen(true)} />
+      {petCreated && <FloatingPet pet={selectedPet} status={floatingPetStatus} onOpen={() => setView("home")} />}
 
       {creatorOpen && (
         <div className="modal-layer" role="dialog" aria-modal="true" aria-label="创建你的 AI 萌宠">
@@ -644,7 +653,7 @@ export default function Home() {
                       <span className="waiting-badge"><i /> 正在等待领养</span>
                       <div className="profile-pet-stage">
                         <span className="tiny-heart heart-one">♥</span><span className="tiny-heart heart-two">♥</span>
-                        <PetAvatar emoji={selectedPet.emoji} color={selectedPet.color} preset={selectedPet.id} size="xl" pulse />
+                        <PetGifAvatar pet={selectedPet} size="xl" className="adoption-preview-gif" />
                       </div>
                       <div className="profile-name-line">
                         <div><h3>{selectedPet.petName}</h3><p>{selectedPet.name}</p></div>
