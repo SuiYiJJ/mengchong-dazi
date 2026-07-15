@@ -128,6 +128,52 @@ function PetAvatar({ emoji, color, size = "md", pulse = false, preset }: { emoji
   );
 }
 
+function FloatingPet({ pet, status, onOpen }: { pet: PetChoice; status: string; onOpen: () => void }) {
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const dragStart = useRef<{ x: number; y: number; offsetX: number; offsetY: number; moved: boolean } | null>(null);
+
+  function onPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragStart.current = { x: event.clientX, y: event.clientY, offsetX: offset.x, offsetY: offset.y, moved: false };
+  }
+
+  function onPointerMove(event: React.PointerEvent<HTMLButtonElement>) {
+    const start = dragStart.current;
+    if (!start) return;
+    const nextX = start.offsetX + event.clientX - start.x;
+    const nextY = start.offsetY + event.clientY - start.y;
+    start.moved ||= Math.abs(nextX - start.offsetX) > 4 || Math.abs(nextY - start.offsetY) > 4;
+    setOffset({
+      x: Math.min(24, Math.max(-(window.innerWidth - 130), nextX)),
+      y: Math.min(window.innerHeight - 118, Math.max(-(window.innerHeight - 150), nextY)),
+    });
+  }
+
+  function onPointerUp(event: React.PointerEvent<HTMLButtonElement>) {
+    const wasDragged = dragStart.current?.moved;
+    dragStart.current = null;
+    if (!wasDragged) onOpen();
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  return (
+    <button
+      className="floating-pet"
+      style={{ transform: `translate3d(${offset.x}px, ${offset.y}px, 0)` }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={() => { dragStart.current = null; }}
+      aria-label={`拖动${pet.petName}移动，点击打开主页`}
+    >
+      <span className="floating-pet-bubble"><i>●</i>{status}</span>
+      <span className="floating-pet-hint">按住拖动</span>
+      <PetAvatar emoji={pet.emoji} color={pet.color} preset={pet.id} size="lg" pulse />
+      <small>{pet.petName}</small>
+    </button>
+  );
+}
+
 function MeetupRoutes({ active }: { active: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -203,6 +249,7 @@ export default function Home() {
   const [toast, setToast] = useState("");
 
   const petName = selectedPet.petName;
+  const floatingPetStatus = view === "chat" ? "正在听你说话…" : view === "nearby" ? "发现 3 个同频搭子" : view === "messages" ? "有新消息，快来看看" : "今天心情很好 ✦";
 
   useEffect(() => {
     if (!selectedMatch || humanJoined || pawRound >= 3) return;
@@ -261,17 +308,6 @@ export default function Home() {
     setCreatorStep(1);
     setView("home");
     setToast(`${petName} 已经住进你的桌面啦`);
-  }
-
-  function resetDemo() {
-    setPetCreated(false);
-    setView("chat");
-    setCreatorOpen(false);
-    setHumanJoined(false);
-    setSelectedMatch(null);
-    setShareActive(false);
-    setMet(false);
-    setToast("演示状态已重置");
   }
 
   function openPaw(match: Match) {
@@ -339,9 +375,7 @@ export default function Home() {
           <div className="mobile-brand"><span className="wenxin-icon-crop"><img src="/wenxin-yiyan-official.png" alt="" /></span> 文心一言</div>
           <div className="breadcrumb"><span>文心一言</span><i>／</i><b>{view === "chat" ? "新对话" : `萌宠搭子 · ${navItems.find((item) => item.id === view)?.label ?? "地图约见"}`}</b></div>
           <div className="top-actions">
-            <button className="privacy-pill"><span /> 隐私保护中</button>
             <button className="icon-button" aria-label="通知">♢<em>2</em></button>
-            <button className="reset-button" onClick={resetDemo}>重置演示</button>
           </div>
         </header>
 
@@ -391,13 +425,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {petCreated && (
-                <button className="desktop-pet" onClick={() => setView("home")} aria-label={`打开${petName}主页`}>
-                  <span className="pet-speech">今天想喝咖啡 ☕</span>
-                  <PetAvatar emoji={selectedPet.emoji} color={selectedPet.color} preset={selectedPet.id} size="lg" pulse />
-                  <small>{petName}</small>
-                </button>
-              )}
             </section>
           )}
 
@@ -569,6 +596,8 @@ export default function Home() {
           {navItems.slice(0, 5).map((item) => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => navigate(item.id)}><span>{item.icon}</span><small>{item.label.replace("文心入口", "文心").replace("附近搭子", "附近").replace("成长手册", "成长")}</small></button>)}
         </nav>
       </section>
+
+      <FloatingPet pet={selectedPet} status={floatingPetStatus} onOpen={() => petCreated ? setView("home") : setCreatorOpen(true)} />
 
       {creatorOpen && (
         <div className="modal-layer" role="dialog" aria-modal="true" aria-label="创建你的 AI 萌宠">
